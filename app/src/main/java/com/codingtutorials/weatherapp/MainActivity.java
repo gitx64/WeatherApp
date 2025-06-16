@@ -2,12 +2,13 @@ package com.codingtutorials.weatherapp;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.*;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -23,88 +24,117 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
     private TextView cityNameText, temperatureText, humidityText, descriptionText, windText;
     private ImageView weatherIcon;
-    private Button refreshButton;
     private EditText cityNameInput;
+    private Button refreshButton;
+
+    private double currentHumidity = 0;
+    private double currentWindSpeed = 0;
+    private String currentCondition = "clear";
+    private String lastSearchedCity = "Mumbai";
+
     private static final String API_KEY = "7be4a25466b8361c2ae28097a6aa5617";
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         cityNameText = findViewById(R.id.cityNameText);
-        temperatureText = findViewById(R.id.temperatureText);
         humidityText = findViewById(R.id.humidityText);
-        windText= findViewById(R.id.windText);
+        windText = findViewById(R.id.windText);
         descriptionText = findViewById(R.id.descriptionText);
         weatherIcon = findViewById(R.id.weatherIcon);
-        refreshButton  = findViewById(R.id.fetchWeatherButton);
         cityNameInput = findViewById(R.id.cityNameInput);
+        refreshButton = findViewById(R.id.fetchWeatherButton);
 
-        refreshButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String cityName = cityNameInput.getText().toString();
-                if(!cityName.isEmpty())
-                {
-                    FetchWeatherData(cityName);
-                }
-                else
-                {
-                    cityNameInput.setError("Please enter a city name");
-                }
+        // Bottom Navigation
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNavigationView);
+        bottomNav.setSelectedItemId(R.id.nav_weather);
+
+        bottomNav.setOnItemSelectedListener(item -> {
+            if (item.getItemId() == R.id.nav_weather) {
+                return true;
+            } else if (item.getItemId() == R.id.nav_agri) {
+                Intent intent = new Intent(MainActivity.this, AgriActivity.class);
+                intent.putExtra("humidity", currentHumidity);
+                intent.putExtra("windSpeed", currentWindSpeed);
+                intent.putExtra("condition", currentCondition);
+                intent.putExtra("city", lastSearchedCity);
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+                return true;
+            }
+            return false;
+        });
+
+        refreshButton.setOnClickListener(view -> {
+            String cityName = cityNameInput.getText().toString().trim();
+            if (!cityName.isEmpty()) {
+                lastSearchedCity = cityName;
+                FetchWeatherData(cityName);
+            } else {
+                cityNameInput.setError("Please enter a city name");
             }
         });
 
+        // Restore last searched city if returned from AgriActivity
+        Intent incomingIntent = getIntent();
+        String returnedCity = incomingIntent.getStringExtra("city");
+        if (returnedCity != null && !returnedCity.isEmpty()) {
+            lastSearchedCity = returnedCity;
+        }
 
-
-        FetchWeatherData("Mumbai");
+        cityNameInput.setText(lastSearchedCity);
+        FetchWeatherData(lastSearchedCity);
     }
 
     private void FetchWeatherData(String cityName) {
-
-        String url = "https:api.openweathermap.org/data/2.5/weather?q="+cityName + "&appid="+ API_KEY + "&units=metric";
+        String url = "https://api.openweathermap.org/data/2.5/weather?q=" + cityName + "&appid=" + API_KEY + "&units=metric";
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.execute(() ->
-                {
-                    OkHttpClient client = new OkHttpClient();
-                    Request request = new Request.Builder().url(url).build();
-                    try {
-                        Response response = client.newCall(request).execute();
-                        String result = response.body().string();
-                        runOnUiThread(() -> updateUI(result));
-                    } catch (IOException e)
-                    {
-                        e.printStackTrace();;
-                    }
-                }
-           );
+        executorService.execute(() -> {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder().url(url).build();
+            try {
+                Response response = client.newCall(request).execute();
+                String result = response.body().string();
+                runOnUiThread(() -> updateUI(result));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
-    private void updateUI(String result)
-    {
-        if(result != null)
-        {
+    @SuppressLint("DefaultLocale")
+    private void updateUI(String result) {
+        if (result != null) {
             try {
                 JSONObject jsonObject = new JSONObject(result);
-                JSONObject main =  jsonObject.getJSONObject("main");
-                double temperature = main.getDouble("temp");
-                double humidity = main.getDouble("humidity");
-                double windSpeed = jsonObject.getJSONObject("wind").getDouble("speed");
+                JSONObject main = jsonObject.getJSONObject("main");
 
-                String description = jsonObject.getJSONArray("weather").getJSONObject(0).getString("description");
-                String iconCode = jsonObject.getJSONArray("weather").getJSONObject(0).getString("icon");
+                currentHumidity = main.getDouble("humidity");
+                currentCondition = jsonObject.getJSONArray("weather")
+                        .getJSONObject(0).getString("description");
+
+                currentWindSpeed = jsonObject.getJSONObject("wind").getDouble("speed");
+
+                String iconCode = jsonObject.getJSONArray("weather")
+                        .getJSONObject(0).getString("icon");
+
                 String resourceName = "ic_" + iconCode;
                 int resId = getResources().getIdentifier(resourceName, "drawable", getPackageName());
                 weatherIcon.setImageResource(resId);
 
-                cityNameText.setText(jsonObject.getString("name"));
-                temperatureText.setText(String.format("%.0f°", temperature));
-                humidityText.setText(String.format("%.0f%%", humidity));
-                windText.setText(String.format("%.0f km/h", windSpeed));
-                descriptionText.setText(description);
-            } catch (JSONException e)
-            {
+                String name = jsonObject.getString("name");
+                lastSearchedCity = name;
+                cityNameText.setText(name);
+                cityNameInput.setText(name);
+
+                humidityText.setText(String.format("%.0f%%", currentHumidity));
+                windText.setText(String.format("%.0f km/h", currentWindSpeed));
+                descriptionText.setText(currentCondition);
+
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
