@@ -26,7 +26,7 @@ public class AgriActivity extends AppCompatActivity {
 
         StringBuilder advice = new StringBuilder();
 
-        // 🌿 Advice based on humidity
+        // based on humidity
         if (humidity >= 40 && humidity <= 70) {
             advice.append("🌾 Moderate Humidity: Good for Wheat, Barley, Mustard.\n\n");
         } else if (humidity > 70) {
@@ -35,7 +35,7 @@ public class AgriActivity extends AppCompatActivity {
             advice.append("🥦 Low Humidity: Favorable for Cabbage, Carrot, Cauliflower.\n\n");
         }
 
-        // 💨 Advice based on wind speed
+        // based on wind speed
         if (windSpeed >= 25) {
             advice.append("💨 High Wind: Avoid pesticide spraying. Protect light crops.\n\n");
         } else if (windSpeed >= 10) {
@@ -44,7 +44,7 @@ public class AgriActivity extends AppCompatActivity {
             advice.append("🪴 Low Wind: Good for spraying and delicate plants.\n\n");
         }
 
-        // 🌦️ Advice based on weather condition
+        // based on weather condition
         if (condition != null && !condition.isEmpty()) {
             String cond = condition.toLowerCase();
 
@@ -74,6 +74,7 @@ public class AgriActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             if (item.getItemId() == R.id.nav_weather) {
                 Intent intent = new Intent(AgriActivity.this, MainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); // Keep MainActivity alive
                 startActivity(intent);
                 overridePendingTransition(0, 0);
                 return true;

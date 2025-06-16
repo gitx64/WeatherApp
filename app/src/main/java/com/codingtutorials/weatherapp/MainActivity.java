@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.*;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -29,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
     private double currentHumidity = 0;
     private double currentWindSpeed = 0;
+    private double currentTemperature = 0;
     private String currentCondition = "clear";
     private String lastSearchedCity = "Mumbai";
 
@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         weatherIcon = findViewById(R.id.weatherIcon);
         cityNameInput = findViewById(R.id.cityNameInput);
         refreshButton = findViewById(R.id.fetchWeatherButton);
+        temperatureText = findViewById(R.id.temperatureText);
 
         // Bottom Navigation
         BottomNavigationView bottomNav = findViewById(R.id.bottomNavigationView);
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, AgriActivity.class);
                 intent.putExtra("humidity", currentHumidity);
                 intent.putExtra("windSpeed", currentWindSpeed);
+                intent.putExtra("temperature", currentTemperature);
                 intent.putExtra("condition", currentCondition);
                 intent.putExtra("city", lastSearchedCity);
                 startActivity(intent);
@@ -113,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject main = jsonObject.getJSONObject("main");
 
                 currentHumidity = main.getDouble("humidity");
+                currentTemperature = main.getDouble("temp");
                 currentCondition = jsonObject.getJSONArray("weather")
                         .getJSONObject(0).getString("description");
 
@@ -130,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 cityNameText.setText(name);
                 cityNameInput.setText(name);
 
+                temperatureText.setText(String.format("%.0f°", currentTemperature));
                 humidityText.setText(String.format("%.0f%%", currentHumidity));
                 windText.setText(String.format("%.0f km/h", currentWindSpeed));
                 descriptionText.setText(currentCondition);
